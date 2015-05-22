@@ -5,10 +5,14 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.text.MessageFormat;
 import java.util.*;
 
+import javax.faces.application.FacesMessage;
 import javax.faces.model.DataModel;
+import javax.persistence.Column;
 import javax.persistence.Table;
 
 import lotus.domino.NotesException;
@@ -319,7 +323,7 @@ public abstract class AbstractDominoModel extends AbstractModelObject {
 				setValueImmediate("$$ModelModifiedAt", new Date());
 				setValueImmediate("$$ModelModifiedBy", FrameworkUtils.getUserName());
 
-				Document doc = document(true);
+				final Document doc = document(true);
 
 				Session session = doc.getAncestorSession();
 				session.evaluate(" @SetField('$$ModelUNID'; @DocumentUniqueID) ", doc);
@@ -328,14 +332,22 @@ public abstract class AbstractDominoModel extends AbstractModelObject {
 					return false;
 				}
 
-				// Clean up any date/time-only fields
-				for(Field field : getClass().getDeclaredFields()) {
-					if(field.getType().equals(java.sql.Date.class)) {
-						session.evaluate(MessageFormat.format(" @If(@IsTime({0}); @SetField(\"{0}\"; @Date({0})); \"\") ", field.getName()), doc);
-					} else if(field.getType().equals(java.sql.Time.class)) {
-						session.evaluate(MessageFormat.format(" @If(@IsTime({0}); @SetField(\"{0}\"; @Time({0})); \"\") ", field.getName()), doc);
+				final Session tmpSession=session;
+				AccessController.doPrivileged(new PrivilegedAction<Void>() {
+					public Void run(){
+						// Clean up any date/time-only fields
+						for(Field field : getClass().getDeclaredFields()) {
+							if(field.getType().equals(java.sql.Date.class)) {
+								tmpSession.evaluate(MessageFormat.format(" @If(@IsTime({0}); @SetField(\"{0}\"; @Date({0})); \"\") ", field.getName()), doc);
+							} else if(field.getType().equals(java.sql.Time.class)) {
+								tmpSession.evaluate(MessageFormat.format(" @If(@IsTime({0}); @SetField(\"{0}\"; @Time({0})); \"\") ", field.getName()), doc);
+							}
+						}
+						
+						return null;
 					}
-				}
+				});
+			
 
 				for(String fieldName : stringSet(namesFields())) {
 					Item item = doc.getFirstItem(fieldName);

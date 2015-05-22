@@ -80,37 +80,97 @@ public abstract class AbstractModelObject extends DataModel implements ModelObje
 		if(readonly()) { return true; }
 
 		// Time for validation!
-
 		// We'll be getting values up to twice, so do a bit of cache
-		Map<String, Object> valCache = new HashMap<String, Object>();
+		final Map<String, Object> valCache = new HashMap<String, Object>();
+		
+		Boolean invalidSetters=AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+			public Boolean run(){
+				
 
-		// First, check that the data types of all @Columns match
-		boolean invalidSetters = false;
-		for(Field field : getClass().getDeclaredFields()) {
-			if(field.getAnnotation(Column.class) != null) {
-				Object val;
-				if(!valCache.containsKey(field.getName())) {
-					valCache.put(field.getName(), getValue(field.getName()));
-				}
-				val = valCache.get(field.getName());
+				// First, check that the data types of all @Columns match
+				boolean invalidSetters = false;
+				for(Field field : getClass().getDeclaredFields()) {
+					if(field.getAnnotation(Column.class) != null) {
+						Object val;
+						if(!valCache.containsKey(field.getName())) {
+							valCache.put(field.getName(), getValue(field.getName()));
+						}
+						val = valCache.get(field.getName());
 
-				boolean valid = checkSetter(field, val);
-				if(!valid) {
-					FrameworkUtils.addMessage(FacesMessage.SEVERITY_ERROR, "Field '" + field.getName() + "' is of invalid type " + val.getClass().getName(), null);
-					invalidSetters = true;
-					continue;
+						boolean valid = checkSetter(field, val);
+						if(!valid) {
+							FrameworkUtils.addMessage(FacesMessage.SEVERITY_ERROR, "Field '" + field.getName() + "' is of invalid type " + val.getClass().getName(), null);
+							invalidSetters = true;
+							continue;
+						}
+					}
 				}
+				
+				return invalidSetters;
 			}
-		}
+		});
+
 		if(invalidSetters) { return false; }
 
 
 		// Now, build a validator for the class
-		Validator validator = Validation.byDefaultProvider().configure()
+		final Validator validator = Validation.byDefaultProvider().configure()
 				.messageInterpolator(new XSPLocaleResourceBundleMessageInterpolator())
 				.buildValidatorFactory().getValidator();
 
 		// Run through the constrained fields to populate their values from the model object
+		
+		Boolean res=AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+			public Boolean run(){
+				BeanDescriptor desc = validator.getConstraintsForClass(this.getClass());
+				for(PropertyDescriptor prop : desc.getConstrainedProperties()) {
+					try {
+						Field field = getClass().getDeclaredField(prop.getPropertyName());
+						Object val;
+						if(!valCache.containsKey(field.getName())) {
+							valCache.put(field.getName(), getValue(field.getName()));
+						}
+						val = valCache.get(field.getName());
+
+						field.setAccessible(true);
+						field.set(this, val);
+					} catch (IllegalArgumentException e) {
+						throw new RuntimeException(e);
+					} catch (IllegalAccessException e) {
+						throw new RuntimeException(e);
+					} catch (SecurityException e) {
+						throw new RuntimeException(e);
+					} catch (NoSuchFieldException e) {
+						throw new RuntimeException(e);
+					}
+				}
+
+
+				// Now run the constraint tests and publish any failures
+				Set<ConstraintViolation<AbstractModelObject>> constraintViolations = validator.validate(AbstractModelObject.this);
+				if(!constraintViolations.isEmpty()) {
+					if(FrameworkUtils.isFaces()) {
+						// In a Faces environment, report the problems to the UI
+						// TODO decide if this is a good idea
+						for(ConstraintViolation<AbstractModelObject> violation : constraintViolations) {
+							FrameworkUtils.addMessage(FacesMessage.SEVERITY_ERROR, violation.getPropertyPath() + ": " + violation.getMessage(), null);
+						}
+						return false;
+					} else {
+						// Otherwise, throw an outright exception
+						throw new ConstraintViolationException(constraintViolations);
+					}
+				}
+
+				
+				return true;
+				
+			}
+		});
+		
+		return res;
+		
+		/*
 		BeanDescriptor desc = validator.getConstraintsForClass(this.getClass());
 		for(PropertyDescriptor prop : desc.getConstrainedProperties()) {
 			try {
@@ -151,7 +211,7 @@ public abstract class AbstractModelObject extends DataModel implements ModelObje
 			}
 		}
 
-		return true;
+		return true;*/
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
