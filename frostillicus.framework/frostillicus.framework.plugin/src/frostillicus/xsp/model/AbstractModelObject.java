@@ -5,6 +5,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -212,10 +214,20 @@ public abstract class AbstractModelObject extends DataModel implements ModelObje
 			return getter.getGenericReturnType();
 		} else {
 			// Look for the property in the classes declared fields, case-insensitive
-			for(Field field : getClass().getDeclaredFields()) {
-				if(field.getName().equalsIgnoreCase(key)) {
-					return field.getGenericType();
+			final String tmpKey=key;
+			Type t=AccessController.doPrivileged(new PrivilegedAction<Type>() {
+				public Type run(){
+					for(Field field : getClass().getDeclaredFields()) {
+						if(field.getName().equalsIgnoreCase(tmpKey)) {
+							return field.getGenericType();
+						}
+					}
+					return null;
 				}
+			});
+			
+			if (t!=null){
+				return t;
 			}
 			// If we're here, there's no definition
 			return Object.class;
@@ -297,11 +309,23 @@ public abstract class AbstractModelObject extends DataModel implements ModelObje
 			return getter.getReturnType();
 		} else {
 			// Look for the property in the classes declared fields, case-insensitive
-			for(Field field : getClass().getDeclaredFields()) {
-				if(field.getName().equalsIgnoreCase(key)) {
-					return field.getType();
+			final String tmpKey=key;
+			Class<?> c=AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
+				public Class<?> run(){
+					for(Field field : getClass().getDeclaredFields()) {
+						if(field.getName().equalsIgnoreCase(tmpKey)) {
+							return field.getType();
+						}
+					}
+					
+					return null;
 				}
+			});
+			
+			if (c!=null){
+				return c;
 			}
+			
 			// If we're here, there's no definition
 			return Object.class;
 		}
