@@ -100,7 +100,7 @@ public abstract class AbstractFormBasedManager extends AbstractDominoManager<Abs
 				}
 				for(String className : design.getJavaResourceClassNames()) {
 					try {
-						Class<?> clazz = loader.loadClass(className);
+						Class<?> clazz = Class.forName(className,true,loader);
 						Table tableAnnotation = clazz.getAnnotation(Table.class);
 						if(tableAnnotation != null) {
 							if(StringUtil.isNotEmpty(tableAnnotation.name())) {

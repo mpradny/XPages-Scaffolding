@@ -16,7 +16,7 @@ public class ModelComponentMapAdapterFactory implements ComponentMapAdapterFacto
 		} else if(obj instanceof String) {
 			// It may be a class name
 			try {
-				Class<?> clazz = FacesContext.getCurrentInstance().getContextClassLoader().loadClass(String.valueOf(obj));
+				Class<?> clazz = Class.forName(String.valueOf(obj),true,FacesContext.getCurrentInstance().getContextClassLoader());
 				if(ModelObject.class.isAssignableFrom(clazz)) {
 					return new ModelClassComponentMapAdapter((Class<? extends ModelObject>)clazz);
 				}

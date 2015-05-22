@@ -17,7 +17,7 @@ public class ServletFactory implements IServletFactory {
 			servletName = servletName.substring(0, 1).toUpperCase() + servletName.substring(1);
 
 			try {
-				Class<?> clazz = module_.getModuleClassLoader().loadClass("servlet." + servletName);
+				Class<?> clazz = Class.forName("servlet." + servletName,true,module_.getModuleClassLoader());
 				return new ServletMatch(module_.createServlet(clazz.getName(), servletName, null), "", path);
 			} catch(ClassNotFoundException e) {
 				//System.out.println("servlet not found: " + servletName);

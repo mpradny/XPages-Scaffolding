@@ -53,7 +53,7 @@ public class AnnotatedBeanResolver extends VariableResolver {
 					Database database = getDatabase(facesContext);
 					DatabaseDesign design = database.getDesign();
 					for(String className : design.getJavaResourceClassNames()) {
-						Class<?> loadedClass = facesContext.getContextClassLoader().loadClass(className);
+						Class<?> loadedClass = Class.forName(className,true,facesContext.getContextClassLoader());
 						ManagedBean beanAnnotation = loadedClass.getAnnotation(ManagedBean.class);
 						if(beanAnnotation != null) {
 							BeanInfo info = new BeanInfo();
@@ -85,7 +85,7 @@ public class AnnotatedBeanResolver extends VariableResolver {
 				Map<String, BeanInfo> beanMap = (Map<String, BeanInfo>)applicationScope.get("$$annotatedManagedBeanMap");
 				if(beanMap.containsKey(name)) {
 					BeanInfo info = beanMap.get(name);
-					Class<?> loadedClass = facesContext.getContextClassLoader().loadClass(info.className);
+					Class<?> loadedClass = Class.forName(info.className,true,facesContext.getContextClassLoader());
 					// Check its scope
 					if("none".equals(info.scope)) {
 						return loadedClass.newInstance();

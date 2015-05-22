@@ -12,7 +12,7 @@ public class SimpleXPagesEventDispatcher implements XPagesEventDispatcher {
 	@SuppressWarnings("unchecked")
 	public void setListenerClasses(final List<String> listenerClassNames) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
 		for (String className : listenerClassNames) {
-			Class<XPagesEventListener> listenerClass = (Class<XPagesEventListener>) FacesContext.getCurrentInstance().getContextClassLoader().loadClass(className);
+			Class<XPagesEventListener> listenerClass = (Class<XPagesEventListener>) Class.forName(className,true,FacesContext.getCurrentInstance().getContextClassLoader());
 			this.addListener(listenerClass.newInstance());
 		}
 	}

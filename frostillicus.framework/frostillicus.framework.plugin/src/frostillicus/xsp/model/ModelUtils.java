@@ -95,7 +95,7 @@ public enum ModelUtils {
 		Class<?> referencedClass = null;
 		if(managerName.contains(".")) {
 			try {
-				referencedClass = loader.loadClass(managerName);
+				referencedClass = Class.forName(managerName,true,loader);
 				if(ModelManager.class.isAssignableFrom(referencedClass)) {
 					// Then we're done immediately
 					return (Class<? extends ModelManager<?>>)referencedClass;
@@ -109,7 +109,7 @@ public enum ModelUtils {
 		// Now, search through the classes in the DB for any @ManagedBean-annotated classes that match
 		for(String className : design.getJavaResourceClassNames()) {
 			try {
-				Class<?> loadedClass = loader.loadClass(className);
+				Class<?> loadedClass = Class.forName(className,true,loader);
 				if(isManager(loadedClass, managerName, referencedClass)) {
 					return (Class<? extends ModelManager<?>>)loadedClass;
 				}
@@ -125,7 +125,7 @@ public enum ModelUtils {
 			for(FacesConfig.ManagedBean bean : facesConfig.getManagedBeans()) {
 				if(StringUtil.isNotEmpty(bean.getClassName())) {
 					try {
-						Class<?> loadedClass = loader.loadClass(bean.getClassName());
+						Class<?> loadedClass = Class.forName(bean.getClassName(),true,loader);
 						if(isManager(loadedClass, managerName, referencedClass)) {
 							return (Class<? extends ModelManager<?>>)loadedClass;
 						}
@@ -181,7 +181,7 @@ public enum ModelUtils {
 		// If the object is null, assume that the managerName is a class name and instantiate anew
 		if(managerObject == null) {
 			try {
-				Class<ModelManager<?>> managerClass = (Class<ModelManager<?>>)FacesContext.getCurrentInstance().getContextClassLoader().loadClass(managerName);
+				Class<ModelManager<?>> managerClass = (Class<ModelManager<?>>)Class.forName(managerName,true,FacesContext.getCurrentInstance().getContextClassLoader());
 				managerObject = managerClass.newInstance();
 			} catch(ClassNotFoundException cnfe) {
 				IOException ioe = new IOException("Error while instantiating manager object for name '" + managerName + "'");
